@@ -1,4 +1,5 @@
 Flask==3.0.3
+Werkzeug==3.0.3
 Flask-SQLAlchemy==3.1.1
 SQLAlchemy==2.0.32
 Flask-Login==0.6.3
@@ -7,5 +8,6 @@ Flask-Migrate==4.0.7
 Flask-SocketIO==5.3.6
 eventlet==0.36.1
 Authlib==1.3.1
+requests==2.32.3
 markdown==3.6
 bleach==6.1.0
