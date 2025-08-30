@@ -650,10 +650,10 @@ def ws_edit(data):
 
 if __name__ == "__main__":
     # Prefer eventlet for WebSocket support
-    try:
-        import eventlet
-        eventlet.monkey_patch()
-        socketio.run(app, host="0.0.0.0", port=90,allow_unsafe_werkzeug=True)#, debug=True)
-    except Exception:
+    # try:
+        # import eventlet
+        # eventlet.monkey_patch()
+    socketio.run(app, host="0.0.0.0", port=90, allow_unsafe_werkzeug=True)#, debug=True)
+    # except Exception:
         # Fallback (long-polling may be used)
-        socketio.run(app, host="0.0.0.0", port=90,allow_unsafe_werkzeug=True)#, debug=True)
+        # socketio.run(app, host="0.0.0.0", port=90,allow_unsafe_werkzeug=True)#, debug=True)
