@@ -35,7 +35,6 @@ bidict==0.23.1
 billiard==4.2.1
 bip-utils==2.9.3
 bitcoin==1.1.42
-bitpay==6.1.0
 bleach==6.1.0
 blinker==1.8.2
 blockfrost-python==0.6.0
@@ -257,7 +256,7 @@ pycoin==0.92.20230326
 pycparser==2.22
 pycryptodome==3.23.0
 pycryptodomex==3.21.0
-pydantic==2.9.2
+pydantic==2.7.4
 pydantic_core==2.23.4
 pydub==0.25.1
 pyethash==0.1.27
