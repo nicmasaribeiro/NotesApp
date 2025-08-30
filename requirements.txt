@@ -4,5 +4,6 @@ SQLAlchemy==2.0.32
 Flask-Login==0.6.3
 Flask-SocketIO==5.3.6
 eventlet==0.36.1
+Flask-Migrate==4.0.7
 markdown==3.6
 bleach==6.1.0
