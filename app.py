@@ -51,7 +51,7 @@ DB_PATH = APP_DIR / "docs.sqlite3"
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///nmbc.sqlite3"
 app.config["SECRET_KEY"] = os.urandom(10).hex()
-app.config["SERVER_NAME"] = "127.0.0.1:90"  # or "localhost:5000"
+# app.config["SERVER_NAME"] = "127.0.0.1:90"  # or "localhost:5000"
 
 db.init_app(app)
 init_oauth(app)
