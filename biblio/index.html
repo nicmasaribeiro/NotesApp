@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>My Citations</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,sans-serif; margin:2rem; color:#e6edf3; background:#0b0e11}
+    a, button{color:#1f6feb}
+    .row{display:flex; gap:.5rem; align-items:center; margin-bottom:1rem}
+    input{padding:.5rem; border-radius:.5rem; border:1px solid #202a33; background:#0e1318; color:#e6edf3}
+    .card{background:#11161c; border:1px solid #202a33; border-radius:12px; padding:1rem; margin:.75rem 0}
+    .muted{color:#9aa7b2}
+    .toolbar{display:flex; gap:.75rem; margin: 0 0 1rem 0}
+    .chip{background:#0e1318; padding:.2rem .5rem; border-radius:999px; border:1px solid #202a33}
+  </style>
+</head>
+<body>
+  <h1>📚 My Citations</h1>
+  <div class="toolbar">
+    <form method="get">
+      <input type="text" name="q" placeholder="Search title/author/key" value="{{ q or '' }}"/>
+      <input type="text" name="tag" placeholder="Filter by tag" value="{{ tag or '' }}"/>
+      <button>Search</button>
+    </form>
+    <a href="{{ url_for('biblio.export_bibtex') }}">Export .bib</a>
+    <a href="{{ url_for('biblio.export_csljson') }}">Export CSL-JSON</a>
+    <a href="{{ url_for('biblio.export_ris') }}">Export .ris</a>
+  </div>
+
+  {% for c in items %}
+    <div class="card">
+      <div><strong><a href="{{ url_for('biblio.get_citation', key=c.key) }}">{{ c.title or c.key }}</a></strong></div>
+      <div class="muted">{{ c.authors }} ({{ c.year }}) — {{ c.venue }}</div>
+      <div class="muted">
+        {% if c.tags %}{% for t in c.tags.split(",") %}<span class="chip">{{ t.strip() }}</span>{% endfor %}{% endif %}
+      </div>
+      {% if c.url %}<div><a href="{{ c.url }}" target="_blank" rel="noopener">Open link</a></div>{% endif %}
+    </div>
+  {% else %}
+    <p class="muted">No citations yet.</p>
+  {% endfor %}
+</body>
+</html>
