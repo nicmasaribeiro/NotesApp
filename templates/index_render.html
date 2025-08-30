@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+  .grid { display:grid; gap:20px; }
+  .card { padding:20px; border-radius:12px; background:var(--card); }
+  .counter h1 { font-size:2.5rem; color:var(--brand); margin:0; }
+  .file-list { margin-top:1rem; }
+  .file-item { padding:8px; border-bottom:1px solid var(--border); }
+</style>
+{% endblock %}
+
+{% block body %}
+  <header class="row" style="justify-content:space-between; align-items:center;">
+    <h1>NMBC Notebook.io</h1>
+    <nav>
+      <a href="{{ url_for('login') }}" class="btn secondary">Login</a>
+      <a href="{{ url_for('new_doc') }}" class="btn">New Document</a>
+    </nav>
+  </header>
+
+  <div class="grid">
+    <!-- Notebook Counter -->
+    <div class="card counter" style="text-align:center;">
+      <h2>Notebook Pages</h2>
+      <h1 id="counter">0</h1>
+      <button class="btn" onclick="add();">Capture Page</button>
+    </div>
+
+    <!-- Upload + Render -->
+    <div class="card">
+      <h2>Upload & Render</h2>
+      <form method="post" enctype="multipart/form-data">
+        <input name="file" type="file" accept="/*" onchange="openFile(event)">
+      </form>
+      <div class="notebook-container" style="margin-top:1rem;">
+        <iframe class="frame" id="img" width="100%" height="500px" sandbox="allow-scripts;"></iframe>
+      </div>
+      <div class="toolbar" style="margin-top:10px;">
+        <a onclick="downloadPage()" class="btn secondary">Download Current</a>
+      </div>
+    </div>
+
+    <!-- Captured Pages -->
+    <div class="card">
+      <h2>Captured Pages</h2>
+      <div id="fileList" class="file-list muted">No captures yet.</div>
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let myStorage = window.localStorage;
+  let count = parseInt(myStorage.getItem('count') || "0");
+  document.getElementById('counter').innerText = count;
+
+  function add(){
+    count++;
+    myStorage.setItem('count', count);
+    document.getElementById('counter').innerText = count;
+
+    let list = document.getElementById('fileList');
+    let div = document.createElement('div');
+    div.className = "file-item";
+    div.innerHTML = "Page " + count + " <button onclick='previewPage(" + count + ")'>Preview</button>";
+    if(list.innerText === "No captures yet.") list.innerHTML = "";
+    list.appendChild(div);
+  }
+
+  function openFile(event){
+    let input = event.target;
+    let reader = new FileReader();
+    reader.onload = () => {
+      let dataURL = reader.result;
+      document.getElementById("img").src = dataURL;
+      myStorage.setItem('buffer', dataURL);
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+
+  function previewPage(n){
+    document.getElementById("img").src = myStorage.getItem('buffer');
+  }
+
+  function downloadPage(){
+    let link = document.createElement("a");
+    link.href = "data:text/html;charset=UTF-8," + encodeURIComponent(document.documentElement.outerHTML);
+    link.download = "notebook.html";
+    link.click();
+  }
+</script>
+{% endblock %}

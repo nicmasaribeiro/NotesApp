@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+	</head>
+	<body>
+		<script>
+			async function saveCitation(payload){
+				try {
+					const r = await fetch("/biblio/save", {
+						method: "POST",
+						headers: {"Content-Type":"application/json", "Accept":"application/json"},
+						body: JSON.stringify(payload)
+					});
+					if(!r.ok){ throw new Error(await r.text()); }
+					const j = await r.json();
+					// Backup to localStorage (namespaced by user + key)
+					const ns = `citations:${(window.CURRENT_USER_ID||'me')}:${payload.key}`;
+					localStorage.setItem(ns, JSON.stringify(payload));
+					alert("Saved ✔");
+					return j;
+				} catch (err){
+					console.error(err);
+					// Fallback: at least keep it locally
+					const ns = `citations:${(window.CURRENT_USER_ID||'me')}:${payload.key}`;
+					localStorage.setItem(ns, JSON.stringify(payload));
+					alert("Saved locally (offline mode). Will sync next time.");
+				}
+			}
+			
+			// Example usage:
+			document.querySelector("#save-cite").addEventListener("click", () => {
+				const payload = {
+					key: "sutton1998reinforcement",
+					title: "Reinforcement Learning: An Introduction",
+					authors: "Sutton, Richard S.; Barto, Andrew G.",
+					year: "1998",
+					venue: "MIT Press",
+					url: "http://incompleteideas.net/book/the-book-2nd.html",
+					tags: "RL,book",
+					abstract: "Classic RL text...",
+					raw: "@book{...}",
+					csl_json: {"id":"sutton1998reinforcement","type":"book","title":"Reinforcement Learning","author":[{"family":"Sutton","given":"Richard S."},{"family":"Barto","given":"Andrew G."}],"issued":{"raw":"1998"}}
+				};
+				saveCitation(payload);
+			});
+		</script>
+		<button id="save-cite">Save this citation</button>
+
+	</body>
+</html>

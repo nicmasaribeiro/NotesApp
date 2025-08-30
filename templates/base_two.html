@@ -1,0 +1,92 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>{{ title or "Markdown + LaTeX Editor" }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <!-- Minimal styling -->
+  <style>
+    :root{
+      --bg:#0b0e11; --card:#121826; --text:#e6edf3; --muted:#9aa7b2; --border:#1c2433;
+      --brand:#1f6feb; --brand-2:#1557c0;
+    }
+    @media (prefers-color-scheme: light) {
+      :root{ --bg:#f7f7fb; --card:#fff; --text:#0f172a; --muted:#6b7280; --border:#e5e7eb; --brand:#1f6feb; --brand-2:#1557c0;}
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    header{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--border); }
+    a{ color: var(--brand); text-decoration: none; }
+    .container{ max-width: 1100px; margin: 0 auto; padding: 18px; }
+    .btn{ background:var(--brand); color:#fff; border:none; padding:8px 12px; border-radius:10px; cursor:pointer; }
+    .btn.secondary{ background:transparent; color:var(--brand); border:1px solid var(--brand); }
+    .btn.danger{ background:#dc2626; }
+    .muted{ color: var(--muted); }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; }
+    .flash{ margin:10px 0; padding:10px 12px; border-left:4px solid var(--brand); background:rgba(31,111,235,.1); }
+  </style>
+
+  <!-- KaTeX (Math rendering in the browser) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+  <!-- highlight.js for code blocks -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
+
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header>
+    <div><a href="{{ url_for('index') }}">📝 Markdown + LaTeX Editor</a></div>
+    <nav style="display:flex; gap:8px; align-items:center;">
+      {% if current_user.is_authenticated %}
+      <span class="muted">Hi, {{ current_user.username }}</span>
+      <a class="btn secondary" href="{{ url_for('new_doc') }}">New Document</a>
+      <a class="btn secondary" href="{{ url_for('logout') }}">Logout</a>
+      {% else %}
+      <a class="btn secondary" href="{{ url_for('login') }}">Login</a>
+      <a class="btn" href="{{ url_for('register') }}">Register</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+          <div class="flash">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block body %}{% endblock %}
+  </div>
+
+  <script>
+    // Helper to render math + highlight code inside a specific element
+    function renderPreview(root){
+      if (window.renderMathInElement) {
+        renderMathInElement(root, {
+          delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false},
+            {left: "\\(", right: "\\)", display: false},
+            {left: "\\[", right: "\\]", display: true}
+          ],
+          throwOnError: false
+        });
+      }
+      if (window.hljs) {
+        root.querySelectorAll("pre code").forEach(block => {
+          try { hljs.highlightElement(block); } catch(e){}
+        });
+      }
+    }
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

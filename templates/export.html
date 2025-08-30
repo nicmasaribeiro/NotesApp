@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>{{ title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <!-- Minimal export stylesheet -->
+  <style>
+    body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; color:#0f172a; }
+    pre{ background:#f6f8fa; padding:12px; overflow:auto; border-radius:10px; }
+    code{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    table{ border-collapse: collapse; }
+    th, td{ border:1px solid #e5e7eb; padding:6px 10px; }
+  </style>
+
+  <!-- KaTeX (so exported HTML renders math offline-ish via CDN) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+  <!-- highlight.js -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
+</head>
+<body>
+  <article id="doc">
+    <h1>{{ title }}</h1>
+    <div>{{ body_html|safe }}</div>
+  </article>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (window.renderMathInElement) {
+        renderMathInElement(document.getElementById("doc"), {
+          delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false},
+            {left: "\\(", right: "\\)", display: false},
+            {left: "\\[", right: "\\]", display: true}
+          ],
+          throwOnError: false
+        });
+      }
+      if (window.hljs) {
+        document.querySelectorAll("pre code").forEach(el => { try { hljs.highlightElement(el); } catch(e){} });
+      }
+    });
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" 
+    onload="renderMathInElement(document.body, {delimiters:[{left:'$$', right:'$$', display:true},{left:'\\(', right:'\\)', display:false}]});"></script>
+  
+  <button id="download-html">Download HTML</button>
+  <script>
+    document.getElementById('download-html').onclick = () => {
+      const blob = new Blob([document.documentElement.outerHTML], {type: 'text/html'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (document.title || 'document') + '.html';
+      a.click();
+    };
+  </script>
+
+</body>
+</html>

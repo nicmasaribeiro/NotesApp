@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block body %}
+  <h2>Share “{{ doc.title }}”</h2>
+
+  <div class="card" style="margin-bottom:14px;">
+    <form method="post" action="{{ url_for('create_share_for_doc', doc_id=doc.id) }}" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <label style="display:flex; align-items:center; gap:6px;">
+        <input type="checkbox" name="can_edit" checked> Editable
+      </label>
+      <button class="btn" type="submit">Create link</button>
+      <a class="btn secondary" href="{{ url_for('edit_doc', doc_id=doc.id) }}">Back to editor</a>
+    </form>
+  </div>
+
+  {% if shares %}
+    <div class="card">
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Link</th>
+            <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Permission</th>
+            <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Created</th>
+            <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for s in shares %}
+          {% set link = url_for('open_shared', token=s.token, _external=True) %}
+          <tr>
+            <td style="padding:8px;">
+              <code id="link-{{ s.id }}">{{ link }}</code>
+              <button class="btn secondary" type="button" onclick="copyLink('{{ 'link-' ~ s.id }}')">Copy</button>
+              <a class="btn secondary" href="{{ link }}" target="_blank" rel="noopener">Open</a>
+            </td>
+            <td style="padding:8px;">
+              {% if s.can_edit %}<span class="badge">Editable</span>{% else %}<span class="badge">View only</span>{% endif %}
+            </td>
+            <td style="padding:8px;">{{ s.created_at.strftime("%Y-%m-%d %H:%M") }} UTC</td>
+            <td style="padding:8px; display:flex; gap:8px;">
+              <form method="post" action="{{ url_for('toggle_share', token=s.token) }}">
+                <button class="btn secondary" type="submit">Toggle View/Edit</button>
+              </form>
+              <form method="post" action="{{ url_for('revoke_share', token=s.token) }}" onsubmit="return confirm('Revoke this link?');">
+                <button class="btn danger" type="submit">Revoke</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">No active share links. Create one above.</p>
+  {% endif %}
+
+  <script>
+    function copyLink(id){
+      const el = document.getElementById(id);
+      const txt = el.textContent;
+      navigator.clipboard.writeText(txt).then(() => {
+        alert("Link copied to clipboard");
+      }).catch(() => {
+        // fallback
+        const ta = document.createElement("textarea");
+        ta.value = txt; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); alert("Link copied"); } catch(e){}
+        document.body.removeChild(ta);
+      });
+    }
+  </script>
+
+  <style>
+    .badge{ padding:2px 8px; border-radius:999px; border:1px solid var(--border); }
+  </style>
+{% endblock %}

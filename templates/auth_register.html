@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block body %}
+  <h2>Register</h2>
+  <div class="card" style="max-width:520px;">
+    <form method="post">
+      <div style="display:grid; gap:10px;">
+        <label>
+          <div class="muted">Email</div>
+          <input type="email" name="email" required
+                 style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border); background:var(--card); color:var(--text);">
+        </label>
+        <label>
+          <div class="muted">Username</div>
+          <input type="text" name="username" required
+                 style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border); background:var(--card); color:var(--text);">
+        </label>
+        <label>
+          <div class="muted">Password</div>
+          <input type="password" name="password" required
+                 style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border); background:var(--card); color:var(--text);">
+        </label>
+        <button class="btn" type="submit">Create account</button>
+        <div class="muted">Already have an account? <a href="{{ url_for('login') }}">Login</a></div>
+      </div>
+    </form>
+  </div>
+{% endblock %}

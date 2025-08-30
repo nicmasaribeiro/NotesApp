@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+  .grid { display:grid; gap:16px; grid-template-columns: 2fr 3fr; }
+  .full { grid-column: 1 / -1; }
+  .row { display:flex; gap:10px; align-items:center; }
+  .card { background: var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  .chip { background: var(--elev); padding:4px 8px; border-radius:999px; font-size:.85rem; }
+  .muted { color: var(--muted); }
+  input[type="text"], input[type="number"], input[type="url"], textarea, select {
+    width:100%; padding:10px; border-radius:10px; border:1px solid var(--border);
+    background:var(--card); color:var(--text);
+  }
+  textarea{ min-height: 120px; }
+  .tbl { width:100%; border-collapse: collapse; }
+  .tbl th, .tbl td { border-bottom:1px solid var(--border); padding:10px; text-align:left; vertical-align: top; }
+  .tbl th { font-weight:600; }
+  .actions a, .actions button { margin-right:6px; }
+  .nowrap { white-space:nowrap; }
+  .hidden { display:none; }
+</style>
+{% endblock %}
+
+{% block body %}
+<header class="row" style="justify-content:space-between; align-items:center;">
+  <h1>Bibliography</h1>
+  <nav class="row">
+    <a href="{{ url_for('biblio.export_all', fmt='json') }}" class="btn secondary">Export JSON</a>
+    <a href="{{ url_for('biblio.export_all', fmt='bib') }}" class="btn secondary">Export BibTeX</a>
+    <a href="{{ url_for('biblio.index') }}" class="btn">Refresh</a>
+  </nav>
+</header>
+
+<div class="grid">
+  <!-- Create / Import -->
+  <div class="card">
+    <h2>Add Entry</h2>
+    <form method="post" action="{{ url_for('biblio.create') }}" enctype="multipart/form-data">
+      <div class="row">
+        <input name="key" type="text" placeholder="Bib key (e.g., smith2023transformers)" required>
+      </div>
+      <div class="row">
+        <input name="title" type="text" placeholder="Title" required>
+      </div>
+      <div class="row">
+        <input name="authors" type="text" placeholder="Authors (comma-separated: Last, First; Last, First)" required>
+      </div>
+      <div class="row">
+        <label class="muted" style="min-width:160px;">On duplicate key</label>
+        <select name="on_conflict" style="max-width:240px;">
+          <option value="update" selected>Update existing</option>
+          <option value="newkey">Create new key (auto-suffix)</option>
+          <option value="skip">Skip (do nothing)</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <input name="venue" type="text" placeholder="Venue (journal / conference)" />
+        <input name="year" type="number" placeholder="Year" min="1800" style="max-width:160px;">
+      </div>
+      <div class="row">
+        <input name="doi" type="text" placeholder="DOI (optional)">
+        <input name="url" type="url" placeholder="URL (optional)">
+      </div>
+      <div class="row">
+        <input name="tags" type="text" placeholder="Tags (comma-separated)">
+      </div>
+      <div class="row">
+        <input name="pdf" type="file" accept="application/pdf">
+      </div>
+      <div>
+        <textarea name="abstract" placeholder="Abstract (optional)"></textarea>
+      </div>
+      <div class="row" style="justify-content:flex-end;">
+        <button class="btn" type="submit">Add</button>
+      </div>
+    </form>
+
+    <hr style="border-color:var(--border);">
+
+    <h3>Import BibTeX</h3>
+    <form method="post" action="{{ url_for('biblio.import_bib') }}" enctype="multipart/form-data">
+      <div class="row">
+        <input name="bibfile" type="file" accept=".bib" required>
+      </div>
+      <div class="row" style="justify-content:flex-end;">
+        <button class="btn secondary" type="submit">Import</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Search / List -->
+  <div class="card">
+    <h2>Search</h2>
+    <form class="row" method="get" action="{{ url_for('biblio.index') }}">
+      <input name="q" type="text" value="{{ q or '' }}" placeholder="Search title, authors, venue, tags…">
+      <select name="year">
+        <option value="">Year</option>
+        {% for y in years %}
+          <option value="{{ y }}" {% if y|string == (year or '') %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn" type="submit">Filter</button>
+    </form>
+
+    <table class="tbl" style="margin-top:12px;">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Authors</th>
+          <th class="nowrap">Venue · Year</th>
+          <th>Tags</th>
+          <th class="nowrap">Cite</th>
+          <th class="nowrap">PDF</th>
+          <th class="nowrap">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td>
+            <div><strong>{{ e.title }}</strong></div>
+            {% if e.abstract %}
+              <div class="muted" style="max-width:520px;">{{ e.abstract[:200] }}{% if e.abstract|length > 200 %}…{% endif %}</div>
+            {% endif %}
+          </td>
+          <td>{{ e.authors }}</td>
+          <td class="nowrap">{{ e.venue or "-" }} · {{ e.year or "-" }}</td>
+          <td>
+            {% for t in (e.tags or '').split(',') if t.strip() %}
+              <span class="chip">{{ t.strip() }}</span>
+            {% endfor %}
+          </td>
+          <td class="nowrap">
+            <button class="btn small secondary" onclick="copyCite('{{ url_for('biblio.cite', entry_id=e.id, style='apa') }}')">APA</button>
+            <button class="btn small secondary" onclick="copyCite('{{ url_for('biblio.cite', entry_id=e.id, style='mla') }}')">MLA</button>
+            <button class="btn small secondary" onclick="copyCite('{{ url_for('biblio.cite', entry_id=e.id, style='chicago') }}')">Chicago</button>
+          </td>
+          <td class="nowrap">
+            {% if e.file_path %}
+              <a class="btn small" href="{{ url_for('biblio.download_pdf', entry_id=e.id) }}">PDF</a>
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td class="nowrap actions">
+            <a class="btn small secondary" href="{{ e.url or '#' }}" target="_blank" rel="noopener">Link</a>
+            <a class="btn small danger" href="{{ url_for('biblio.delete', entry_id=e.id) }}" onclick="return confirm('Delete this entry?')">Delete</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="muted">No entries yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Quick notes (extrapolated from your condensed template’s note/counter idea) -->
+  <div class="card full">
+    <div class="row" style="justify-content:space-between;">
+      <h2>Quick Notes (per-session)</h2>
+      <div class="muted">Lightweight, local-only annotations (stored in sessionStorage)</div>
+    </div>
+    <div class="row">
+      <input id="qn-title" type="text" placeholder="Note title">
+      <button class="btn secondary" onclick="addQuickNote()">Add</button>
+    </div>
+    <textarea id="qn-body" placeholder="Write a brief thought…"></textarea>
+    <div id="qn-list" style="margin-top:10px;"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function copyCite(url){
+  try{
+    const r = await fetch(url);
+    const t = await r.text();
+    await navigator.clipboard.writeText(t);
+    alert("Citation copied!");
+  }catch(e){ alert("Could not copy citation."); }
+}
+
+// quick notes (extrapolated from your original template’s note/counter model)
+const qnList = document.getElementById("qn-list");
+function addQuickNote(){
+  const title = document.getElementById("qn-title").value.trim();
+  const body  = document.getElementById("qn-body").value.trim();
+  if(!title && !body){ return; }
+  const idx = String(Number(sessionStorage.getItem("bib_qn_count")||"0")+1);
+  sessionStorage.setItem("bib_qn_count", idx);
+  sessionStorage.setItem("bib_qn_"+idx, JSON.stringify({title, body, at: new Date().toISOString()}));
+  renderQuickNotes();
+  document.getElementById("qn-title").value = "";
+  document.getElementById("qn-body").value = "";
+}
+function renderQuickNotes(){
+  qnList.innerHTML = "";
+  const n = Number(sessionStorage.getItem("bib_qn_count")||"0");
+  if(n===0){ qnList.innerHTML = "<div class='muted'>No notes yet.</div>"; return; }
+  for(let i=1;i<=n;i++){
+    const raw = sessionStorage.getItem("bib_qn_"+i);
+    if(!raw) continue;
+    const item = JSON.parse(raw);
+    const div = document.createElement("div");
+    div.className = "card";
+    div.style.marginTop = "8px";
+    div.innerHTML = `<div class="row" style="justify-content:space-between;">
+        <strong>${item.title||"(untitled)"}</strong>
+        <span class="muted">${new Date(item.at).toLocaleString()}</span>
+      </div>
+      <div style="margin-top:6px;">${(item.body||"").replace(/</g,"&lt;")}</div>`;
+    qnList.appendChild(div);
+  }
+}
+document.addEventListener("DOMContentLoaded", renderQuickNotes);
+</script>
+{% endblock %}

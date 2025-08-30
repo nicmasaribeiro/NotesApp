@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+  .wrap { display:grid; grid-template-columns: 1.1fr .9fr; gap:14px; }
+  textarea{
+    width:100%; min-height:70vh; padding:12px; border-radius:12px;
+    border:1px solid var(--border); background:var(--card); color:var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .preview{ min-height:70vh; padding:16px; border-radius:12px; border:1px solid var(--border); background:var(--card); overflow:auto; }
+  .topbar{ display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .presence{ font-size:.9rem; color:var(--muted); }
+  .badge{ padding:2px 8px; border-radius:999px; border:1px solid var(--border); margin-left:6px; }
+</style>
+{% endblock %}
+
+{% block body %}
+  <div class="topbar">
+    <div>
+      <strong>{{ title }}</strong>
+      {% if can_edit %}
+        <span class="badge">Editable</span>
+      {% else %}
+        <span class="badge">View only</span>
+      {% endif %}
+    </div>
+    <div class="presence">Online: <span id="who"></span></div>
+  </div>
+
+  <div class="wrap">
+    <div>
+      {% if can_edit %}
+        <textarea id="editor" spellcheck="false">{{ initial_content }}</textarea>
+      {% else %}
+        <textarea id="editor" spellcheck="false" disabled>{{ initial_content }}</textarea>
+      {% endif %}
+      <div class="muted" style="margin-top:8px;">
+        Room token: <code>{{ token }}</code> &middot; Version: <span id="ver">{{ version }}</span>
+      </div>
+    </div>
+    <div class="preview" id="preview"></div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+<script>
+  const token = {{ token|tojson }};
+  const canEdit = {{ can_edit|tojson }};
+  let version = {{ version|tojson }};
+  const username = "user-" + Math.random().toString(36).slice(2,7);
+
+  const ta = document.getElementById("editor");
+  const preview = document.getElementById("preview");
+  const who = document.getElementById("who");
+  const verEl = document.getElementById("ver");
+
+  const socket = io(); // auto connects to same origin
+  socket.on("connect", () => {
+    socket.emit("join", { token, username });
+  });
+
+  socket.on("presence", (data) => {
+    who.textContent = (data.users || []).join(", ");
+  });
+
+  socket.on("cursor", (data) => {
+    // Here you could show remote cursors. For simplicity we omit the UI markers.
+    // console.log("cursor", data);
+  });
+
+  socket.on("content", (data) => {
+    // Incoming new canonical content from server
+    const incoming = data.content || "";
+    version = data.version || version;
+    verEl.textContent = version;
+
+    // If I'm actively typing, avoid clobbering my caret:
+    if (document.activeElement === ta && canEdit) {
+      // If the text is identical, do nothing
+      if (ta.value === incoming) return;
+      // If different, do a soft-resync: stash selection, set value, restore selection bounds if possible
+      const start = ta.selectionStart, end = ta.selectionEnd;
+      ta.value = incoming;
+      try {
+        ta.setSelectionRange(start, end);
+      } catch(e){}
+    } else {
+      ta.value = incoming;
+    }
+    schedulePreview();
+  });
+
+  socket.on("resync", (data) => {
+    // Server says we were stale; update content & version
+    ta.value = data.content || "";
+    version = data.version || version;
+    verEl.textContent = version;
+    schedulePreview();
+  });
+
+  socket.on("error", (data) => {
+    alert(data.message || "Error");
+  });
+
+  function sendCursor() {
+    if (!canEdit) return;
+    socket.emit("cursor", { token, index: ta.selectionStart || 0, username });
+  }
+  ta.addEventListener("keyup", sendCursor);
+  ta.addEventListener("click", sendCursor);
+
+  let typingTimer = null;
+  function scheduleSave() {
+    if (!canEdit) return;
+    if (typingTimer) clearTimeout(typingTimer);
+    typingTimer = setTimeout(pushEdit, 200); // debounce network
+  }
+  function pushEdit() {
+    socket.emit("edit", {
+      token,
+      content: ta.value || "",
+      base_version: version,
+      username
+    });
+  }
+
+  // Preview rendering via server sanitizer + KaTeX client
+  async function updatePreview() {
+    try{
+      const res = await fetch("{{ url_for('api_preview') }}", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({text: ta.value || ""})
+      });
+      const data = await res.json();
+      preview.innerHTML = data.html || "";
+      renderPreview(preview);
+    } catch(e){
+      preview.innerHTML = "<p style='color:#dc2626'>Preview error.</p>";
+    }
+  }
+  let pvTimer = null;
+  function schedulePreview(){
+    if (pvTimer) clearTimeout(pvTimer);
+    pvTimer = setTimeout(updatePreview, 150);
+  }
+
+  // Events
+  ta.addEventListener("input", () => { scheduleSave(); schedulePreview(); });
+
+  // Initial render
+  document.addEventListener("DOMContentLoaded", () => {
+    schedulePreview();
+  });
+
+  // Leave room on unload
+  window.addEventListener("beforeunload", () => {
+    socket.emit("leave", { token });
+  });
+</script>
+{% endblock %}

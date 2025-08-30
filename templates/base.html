@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>{{ title or "NMBC Note.io" }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <!-- Minimal styling -->
+  <style>
+    :root{
+      --bg:#0b0e11; --card:#121826; --text:#e6edf3; --muted:#9aa7b2; --border:#1c2433;
+      --brand:#1f6feb; --brand-2:#1557c0; --good:#10b981; --warn:#f59e0b; --danger:#dc2626;
+      --chip:#0f172a; --chip-border:#22314a;
+    }
+    @media (prefers-color-scheme: light) {
+      :root{
+        --bg:#f7f7fb; --card:#fff; --text:#0f172a; --muted:#6b7280; --border:#e5e7eb;
+        --brand:#1f6feb; --brand-2:#1557c0; --chip:#eef2ff; --chip-border:#dbe5ff;
+      }
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      display:flex; flex-direction:column;
+    }
+    header{
+      position:sticky; top:0; z-index:50;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 16px; border-bottom:1px solid var(--border); background:var(--bg);
+      gap:12px;
+    }
+    a{ color: var(--brand); text-decoration: none; }
+    a:hover{ text-decoration: underline; }
+    .brand{ font-weight:700; letter-spacing:.2px; color:var(--text); text-decoration:none; }
+    .brand span{ color:var(--brand); }
+    .container{ max-width: 1140px; margin: 0 auto; padding: 18px; width:100%; }
+    .btn{
+      background:var(--brand); color:#fff; border:1px solid var(--brand);
+      padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600;
+    }
+    .btn.secondary{ background:transparent; color:var(--brand); }
+    .btn.ghost{ background:transparent; color:var(--text); border:1px solid var(--border); }
+    .btn.danger{ background:var(--danger); border-color:var(--danger); }
+    .muted{ color: var(--muted); }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; }
+    .flash{ margin:10px 0; padding:10px 12px; border-left:4px solid var(--brand); background:rgba(31,111,235,.12); border-radius:8px; }
+    nav.primary{
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    }
+    .nav-group{ position:relative; }
+    .nav-trigger{
+      border:1px solid var(--border); background:transparent; color:var(--text);
+      padding:8px 10px; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:6px;
+    }
+    .nav-menu{
+      position:absolute; top:42px; left:0; min-width:260px; padding:10px; display:none;
+      background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+    }
+    .nav-menu a, .nav-menu button.export-page{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:8px 10px; border-radius:8px; color:var(--text); text-decoration:none; width:100%;
+    }
+    .nav-menu a:hover, .nav-menu button.export-page:hover{ background:rgba(31,111,235,.12); }
+    .nav-menu .chip{
+      display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px;
+      background:var(--chip); border:1px solid var(--chip-border); color:var(--muted); font-size:.8rem;
+    }
+    .spacer{ flex:1; }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      border:1px solid var(--border); border-bottom-width:3px; padding:2px 6px; border-radius:6px; font-size:.8rem; color:var(--muted);
+    }
+    /* Command palette */
+    .palette-backdrop{
+      position:fixed; inset:0; display:none; align-items:flex-start; justify-content:center;
+      background:rgba(0,0,0,.45); backdrop-filter: blur(2px); z-index:60; padding-top:10vh;
+    }
+    .palette{
+      width:min(760px, 92vw); background:var(--card); border:1px solid var(--border);
+      border-radius:14px; overflow:hidden; box-shadow: 0 20px 50px rgba(0,0,0,.4);
+    }
+    .palette header{
+      padding:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px;
+      position:relative; top:auto;
+    }
+    .palette input{
+      width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+      background:transparent; color:var(--text);
+    }
+    .palette .results{ max-height:50vh; overflow:auto; }
+    .palette .results a{ display:block; padding:10px 12px; color:var(--text); text-decoration:none; }
+    .palette .results a:hover{ background:rgba(31,111,235,.12); }
+    /* Footer */
+    footer{
+      margin-top:auto; border-top:1px solid var(--border); background:var(--bg);
+    }
+    .footer-grid{
+      max-width:1140px; margin:0 auto; padding:18px; display:grid; gap:16px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+    .footer-grid h4{ margin:.25rem 0 .5rem; font-size:1rem; }
+    .footer-grid a{ display:block; color:var(--muted); padding:4px 0; text-decoration:none; }
+    .footer-grid a:hover{ color:var(--text); text-decoration:underline; }
+    /* Search bar (header) */
+    .search-wrap{ position:relative; width:min(380px, 42vw); }
+    .search-wrap input{
+      width:100%; padding:8px 10px 8px 34px; border-radius:10px; border:1px solid var(--border);
+      background:transparent; color:var(--text);
+    }
+    .search-wrap .icon{
+      position:absolute; left:8px; top:50%; transform:translateY(-50%); opacity:.6;
+      font-size:14px; user-select:none;
+    }
+    /* Content */
+    main.container{ padding-top: 8px; }
+  </style>
+
+  <!-- KaTeX (Math rendering in the browser) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+  <!-- highlight.js for code blocks -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
+
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header aria-label="Top navigation">
+    <a class="brand" href="{{ url_for('index') }}">NMBC <span>Note.io</span></a>
+
+    <!-- Global quick search -->
+    <form class="search-wrap" method="GET" action="/search" role="search" aria-label="Global search">
+      <span class="icon">🔎</span>
+      <input name="q" placeholder="Search docs, datasets, notebooks…  (Ctrl/⌘+K)" aria-label="Search"/>
+    </form>
+
+    <nav class="primary" aria-label="Primary">
+      <div class="nav-group">
+        <button class="nav-trigger" data-menu="create">Create ▾</button>
+        <div class="nav-menu" id="menu-create" role="menu" aria-label="Create">
+          <a href="{{ url_for('new_doc') }}">➕ New Document <span class="chip">Markdown / LaTeX</span></a>
+          <a href="/notebooks/new">➕ New Notebook <span class="chip">Collaborative</span></a>
+          <a href="/datasets/new">➕ New Dataset</a>
+          <a href="/markets/new">➕ New Prediction Market</a>
+          <a href="/jobs/new">➕ New Job <span class="chip">GPU/Async</span></a>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <button class="nav-trigger" data-menu="explore">Explore ▾</button>
+        <div class="nav-menu" id="menu-explore" role="menu" aria-label="Explore">
+          <a href="/docs">📄 Documents</a>
+          <a href="/notebooks">🧑‍🤝‍🧑 Notebooks</a>
+          <a href="/datasets">🗃️ Datasets</a>
+          <a href="/marketplace">🛒 Marketplace</a>
+          <a href="/finance-lab">🧪 Finance & Backtesting Lab</a>
+          <a href="/portfolio">📈 Portfolio</a>
+          <a href="/portfolio/optimize">⚙️ Optimizer</a>
+          <a href="/portfolio/backtests">🔁 Backtests</a>
+          <a href="/prediction">🎯 Prediction Markets</a>
+          <a href="/governance">🏛️ Governance</a>
+          <a href="/jobs">🖥️ Jobs (GPU/Async)</a>
+          <a href="/web3">⛓️ Web3</a>
+          <a href="/wallet">👛 Wallet</a>
+          <a href="/admin">🛡️ Admin</a>
+          <a href="/api">🔌 API</a>
+        </div>
+      </div>
+
+      <!-- NEW: Organizer menu -->
+      <div class="nav-group">
+        <button class="nav-trigger" data-menu="organize">Organize ▾</button>
+        <div class="nav-menu" id="menu-organize" role="menu" aria-label="Organize">
+          <a href="{{ url_for('organizer.index') }}">📋 Organizer Home <span class="chip">Tasks + Calendar</span></a>
+          <a href="{{ url_for('organizer.projects') }}">🗂️ Projects <span class="chip">Prioritize</span></a>
+          <a href="{{ url_for('organizer.dashboards') }}">📊 Dashboards <span class="chip">Personalized</span></a>
+          <button type="button" class="export-page" onclick="exportPage()" title="Export this page as HTML">⬇️ Export Page <span class="chip">HTML</span></button>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <button class="nav-trigger" data-menu="help">Help ▾</button>
+        <div class="nav-menu" id="menu-help" role="menu" aria-label="Help">
+          <a href="/docs/how-to">📘 How-To</a>
+          <a href="/docs/shortcuts">⌨️ Shortcuts</a>
+          <a href="/docs/changelog">🗒️ Changelog</a>
+          <a href="/support">💬 Support</a>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      {% if current_user.is_authenticated %}
+        <span class="muted">Hi, {{ current_user.username }}</span>
+        <a class="btn secondary" href="{{ url_for('new_doc') }}">New Document</a>
+        <a class="btn ghost" href="/editor">Editor</a>
+        <a class="btn ghost" href="/export">Export</a>
+        <a class="btn secondary" href="{{ url_for('logout') }}">Logout</a>
+      {% else %}
+        <a class="btn secondary" href="{{ url_for('login') }}">Login</a>
+        <a class="btn" href="{{ url_for('register') }}">Register</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="container" id="app-main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+          <div class="flash" role="status">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block body %}{% endblock %}
+  </main>
+
+  <!-- Footer with a compact sitemap -->
+  <footer>
+    <div class="footer-grid">
+      <section>
+        <h4>Create</h4>
+        <a href="{{ url_for('new_doc') }}">New Document</a>
+        <a href="/notebooks/new">New Notebook</a>
+        <a href="/datasets/new">New Dataset</a>
+        <a href="/jobs/new">New Job</a>
+        <a href="/markets/new">New Market</a>
+      </section>
+      <section>
+        <h4>Work</h4>
+        <a href="/docs">Documents</a>
+        <a href="/notebooks">Notebooks</a>
+        <a href="/datasets">Datasets</a>
+        <a href="/marketplace">Marketplace</a>
+        <a href="/finance-lab">Finance Lab</a>
+      </section>
+      <section>
+        <h4>Portfolio</h4>
+        <a href="/portfolio">Overview</a>
+        <a href="/portfolio/optimize">Optimizer</a>
+        <a href="/portfolio/backtests">Backtests</a>
+      </section>
+      <!-- NEW: Organizer links in footer -->
+      <section>
+        <h4>Organize</h4>
+        <a href="{{ url_for('organizer.index') }}">Organizer Home</a>
+        <a href="{{ url_for('organizer.projects') }}">Projects</a>
+        <a href="{{ url_for('organizer.dashboards') }}">Dashboards</a>
+      </section>
+      <section>
+        <h4>Systems</h4>
+        <a href="/jobs">GPU/Async Jobs</a>
+        <a href="/prediction">Prediction Markets</a>
+        <a href="/governance">Governance</a>
+        <a href="/web3">Web3</a>
+        <a href="/wallet">Wallet</a>
+        <a href="/admin">Admin</a>
+        <a href="/api">API</a>
+      </section>
+      <section>
+        <h4>Help</h4>
+        <a href="/docs/how-to">How-To</a>
+        <a href="/docs/shortcuts">Shortcuts</a>
+        <a href="/docs/changelog">Changelog</a>
+        <a href="/support">Support</a>
+      </section>
+    </div>
+  </footer>
+
+  <!-- Command Palette -->
+  <div class="palette-backdrop" id="palette-backdrop" aria-hidden="true">
+    <div class="palette" role="dialog" aria-modal="true" aria-labelledby="palette-label">
+      <header>
+        <strong id="palette-label">Quick Actions</strong>
+        <span class="spacer"></span>
+        <span class="kbd">Esc</span>
+      </header>
+      <div style="padding:12px;">
+        <input id="palette-input" placeholder="Type to jump… e.g., 'organizer', 'projects', 'dashboards'"/>
+      </div>
+      <div class="results" id="palette-results"></div>
+    </div>
+  </div>
+
+  <script>
+    // --- Dropdown menus ---
+    const byId = (id)=>document.getElementById(id);
+    const openMenus = new Set();
+    function toggleMenu(btn, id){
+      const menu = byId(id);
+      const isOpen = menu.style.display === 'block';
+      document.querySelectorAll('.nav-menu').forEach(m=>m.style.display='none');
+      openMenus.clear();
+      if(!isOpen){ menu.style.display='block'; openMenus.add(id); }
+    }
+    document.querySelectorAll('.nav-trigger').forEach(btn=>{
+      const id = 'menu-' + btn.dataset.menu;
+      btn.addEventListener('click', (e)=>{ e.preventDefault(); toggleMenu(btn, id); });
+    });
+    document.addEventListener('click', (e)=>{
+      if(!e.target.closest('.nav-group')){ 
+        document.querySelectorAll('.nav-menu').forEach(m=>m.style.display='none');
+        openMenus.clear();
+      }
+    });
+
+    // --- Render math + highlight code inside a specific element ---
+    function renderPreview(root){
+      if (window.renderMathInElement) {
+        renderMathInElement(root, {
+          delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false},
+            {left: "\\(", right: "\\)", display: false},
+            {left: "\\[", right: "\\]", display: true}
+          ],
+          throwOnError: false
+        });
+      }
+      if (window.hljs) {
+        root.querySelectorAll("pre code").forEach(block => {
+          try { hljs.highlightElement(block); } catch(e){}
+        });
+      }
+    }
+    // initial render pass for current page
+    document.addEventListener('DOMContentLoaded', ()=> renderPreview(document));
+
+    // --- Simple page exporter (data-URI) — mirrors your earlier “Download Notebook” flow ---
+    function exportPage(filename="page.html"){
+      const html = document.documentElement.outerHTML;
+      const href = 'data:text/html;charset=UTF-8,'+encodeURIComponent(html);
+      const a = document.createElement('a'); a.href = href; a.download = filename; a.click();
+    }
+
+    // --- Command palette (Ctrl/⌘+K) ---
+    const paletteBackdrop = byId('palette-backdrop');
+    const paletteInput = byId('palette-input');
+    const paletteResults = byId('palette-results');
+    const LINKS = [
+      // Create
+      {k:'new doc', t:'New Document', href: "{{ url_for('new_doc') }}"},
+      {k:'new notebook', t:'New Notebook', href:'/notebooks/new'},
+      {k:'new dataset', t:'New Dataset', href:'/datasets/new'},
+      {k:'new job', t:'New Job', href:'/jobs/new'},
+      {k:'new market', t:'New Prediction Market', href:'/markets/new'},
+      // Explore
+      {k:'documents doc', t:'Documents', href:'/docs'},
+      {k:'notebooks', t:'Notebooks', href:'/notebooks'},
+      {k:'datasets', t:'Datasets', href:'/datasets'},
+      {k:'marketplace', t:'Marketplace', href:'/marketplace'},
+      {k:'finance lab backtesting', t:'Finance & Backtesting Lab', href:'/finance-lab'},
+      {k:'portfolio', t:'Portfolio', href:'/portfolio'},
+      {k:'optimize optimizer markowitz', t:'Optimizer', href:'/portfolio/optimize'},
+      {k:'backtests', t:'Backtests', href:'/portfolio/backtests'},
+      {k:'prediction markets', t:'Prediction Markets', href:'/prediction'},
+      {k:'governance', t:'Governance', href:'/governance'},
+      {k:'jobs gpu async', t:'Jobs (GPU/Async)', href:'/jobs'},
+      {k:'web3', t:'Web3', href:'/web3'},
+      {k:'wallet', t:'Wallet', href:'/wallet'},
+      {k:'admin', t:'Admin', href:'/admin'},
+      {k:'api', t:'API', href:'/api'},
+      // Organizer
+      {k:'organizer', t:'Organizer Home', href:'{{ url_for("organizer.index") }}'},
+      {k:'projects', t:'Projects', href:'{{ url_for("organizer.projects") }}'},
+      {k:'dashboards personal dashboard', t:'Dashboards', href:'{{ url_for("organizer.dashboards") }}'},
+      // Utilities
+      {k:'editor', t:'Editor', href:'/editor'},
+      {k:'export', t:'Export', href:'/export'},
+      {k:'how to docs', t:'How-To', href:'/docs/how-to'},
+      {k:'shortcuts', t:'Shortcuts', href:'/docs/shortcuts'},
+      {k:'changelog', t:'Changelog', href:'/docs/changelog'},
+      {k:'support help', t:'Support', href:'/support'},
+      {k:'search', t:'Search', href:'/search'}
+    ];
+    function openPalette(){
+      paletteBackdrop.style.display='flex';
+      paletteInput.value='';
+      paletteResults.innerHTML='';
+      paletteBackdrop.setAttribute('aria-hidden','false');
+      setTimeout(()=>paletteInput.focus(), 10);
+    }
+    function closePalette(){
+      paletteBackdrop.style.display='none';
+      paletteBackdrop.setAttribute('aria-hidden','true');
+    }
+    function filterLinks(q){
+      q = q.trim().toLowerCase();
+      if(!q) return [];
+      return LINKS
+        .map(item=>{
+          const score = q.split(/\s+/).reduce(
+            (s,term)=> s + (item.k.includes(term) || item.t.toLowerCase().includes(term) ? 1:0), 0
+          );
+          return {...item, score};
+        })
+        .filter(x=>x.score>0)
+        .sort((a,b)=> b.score - a.score)
+        .slice(0, 12);
+    }
+    function renderResults(items){
+      paletteResults.innerHTML = items.map(i=>`<a href="${i.href}">${i.t}</a>`).join('') ||
+        `<div class="muted" style="padding:10px 12px;">No results</div>`;
+    }
+    paletteInput?.addEventListener('input', (e)=> renderResults(filterLinks(e.target.value)));
+    paletteBackdrop?.addEventListener('click', (e)=> { if(e.target === paletteBackdrop) closePalette(); });
+    document.addEventListener('keydown', (e)=>{
+      const mod = e.metaKey || e.ctrlKey;
+      if(mod && e.key.toLowerCase()==='k'){ e.preventDefault(); openPalette(); }
+      if(e.key==='Escape' && paletteBackdrop.style.display==='flex'){ closePalette(); }
+    });
+
+    // Submit header search to /search
+    document.querySelector('form.search-wrap')?.addEventListener('submit', (e)=>{
+      // normal navigation; SPA hook optional
+    });
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

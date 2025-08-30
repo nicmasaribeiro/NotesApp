@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block body %}
+  <h2>Documents</h2>
+  {% if docs %}
+    <div class="card">
+      <ul style="list-style:none; padding:0; margin:0;">
+        {% for d in docs %}
+          <li style="display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);">
+            <div>
+              <a href="{{ url_for('edit_doc', doc_id=d.id) }}"><strong>{{ d.title }}</strong></a>
+              <div class="muted">Updated {{ d.updated_at.strftime("%Y-%m-%d %H:%M") }} UTC</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <a class="btn secondary" href="{{ url_for('download_md', doc_id=d.id) }}">Download .md</a>
+              <a class="btn secondary" href="{{ url_for('export_html', doc_id=d.id) }}">Export .html</a>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% else %}
+    <p class="muted">No documents yet. <a href="{{ url_for('new_doc') }}">Create one</a>.</p>
+  {% endif %}
+{% endblock %}

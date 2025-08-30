@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block head %}
+  <style>
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+    .row { display:flex; gap:10px; align-items:center; margin-bottom:8px; }
+    input[type="text"]{ width:100%; padding:10px; border-radius:10px; border:1px solid var(--border); background:var(--card); color:var(--text);}
+    textarea{ width:100%; min-height:70vh; resize:vertical; padding:12px; border-radius:12px; border:1px solid var(--border); background:var(--card); color:var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .preview{ min-height:70vh; padding:16px; border-radius:12px; border:1px solid var(--border); background:var(--card); overflow:auto; }
+    .toolbar{ display:flex; gap:8px; }
+  </style>
+{% endblock %}
+{% block body %}
+  <form method="post" action="{{ url_for('new_doc') if not doc else url_for('edit_doc', doc_id=doc.id) }}">
+    <div class="row">
+      <input type="text" name="title" placeholder="Title" value="{{ '' if not doc else doc.title }}">
+      <div class="toolbar">
+        <!-- templates/editor.html (toolbar area) -->
+        {% if doc %}
+        <a class="btn secondary" href="{{ url_for('download_md', doc_id=doc.id) }}">Download .md</a>
+        <a class="btn secondary" href="{{ url_for('export_html', doc_id=doc.id) }}">Export .html</a>
+        <a class="btn" href="{{ url_for('list_shares', doc_id=doc.id) }}">Share</a>
+        {% endif %}
+        <button class="btn" type="submit">Save</button>
+        
+      </div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <textarea id="editor" name="content" placeholder="Write Markdown + LaTeX here...">{% if doc %}{{ doc.content }}{% endif %}</textarea>
+        <div class="muted" style="margin-top:8px;">
+          Tip: Use <code>$...$</code> for inline math and <code>$$...$$</code> for display math. Ctrl/Cmd+S to save.
+        </div>
+      </div>
+      <div class="card preview" id="preview"><em class="muted">Live preview will appear here…</em></div>
+    </div>
+  </form>
+{% endblock %}
+{% block scripts %}
+<script>
+  const ta = document.getElementById("editor");
+  const preview = document.getElementById("preview");
+
+  async function updatePreview() {
+    const text = ta.value || "";
+    try{
+      const res = await fetch("{{ url_for('api_preview') }}", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({text})
+      });
+      const data = await res.json();
+      preview.innerHTML = data.html || "";
+      renderPreview(preview);
+    } catch(e){
+      preview.innerHTML = "<p style='color:#dc2626'>Preview error.</p>";
+    }
+  }
+
+  // Debounce updates
+  let t = null;
+  function schedule(){
+    if (t) clearTimeout(t);
+    t = setTimeout(updatePreview, 250);
+  }
+
+  // Initial + on input
+  document.addEventListener("DOMContentLoaded", updatePreview);
+  ta.addEventListener("input", schedule);
+
+  // Ctrl/Cmd+S to submit form
+  window.addEventListener("keydown", (e) => {
+    const mod = navigator.platform.includes("Mac") ? e.metaKey : e.ctrlKey;
+    if (mod && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      e.stopPropagation();
+      e.target.closest("form").submit();
+    }
+  });
+</script>
+{% endblock %}
