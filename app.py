@@ -56,28 +56,28 @@ app.config["SERVER_NAME"] = "127.0.0.1:90"  # or "localhost:5000"
 db.init_app(app)
 init_oauth(app)
 
-# in app.py after creating app
-def _mask(v):
-    if not v: return "MISSING"
-    return f"{v[:6]}...{v[-4:]}"
-print("[OAUTH] GOOGLE_CLIENT_ID:", _mask(os.getenv("GOOGLE_CLIENT_ID")))
-print("[OAUTH] GOOGLE_CLIENT_SECRET:", _mask(os.getenv("GOOGLE_CLIENT_SECRET")))
-print("[OAUTH] SERVER_NAME:", app.config.get("SERVER_NAME"))
+# # in app.py after creating app
+# def _mask(v):
+#     if not v: return "MISSING"
+#     return f"{v[:6]}...{v[-4:]}"
+# print("[OAUTH] GOOGLE_CLIENT_ID:", _mask(os.getenv("GOOGLE_CLIENT_ID")))
+# print("[OAUTH] GOOGLE_CLIENT_SECRET:", _mask(os.getenv("GOOGLE_CLIENT_SECRET")))
+# print("[OAUTH] SERVER_NAME:", app.config.get("SERVER_NAME"))
 
 
 
-google = oauth.register(
-    name='google',
-    client_id="YOUR_GOOGLE_CLIENT_ID",
-    client_secret="YOUR_GOOGLE_CLIENT_SECRET",
-    access_token_url="https://accounts.google.com/o/oauth2/token",
-    access_token_params=None,
-    authorize_url="https://accounts.google.com/o/oauth2/auth",
-    authorize_params={"prompt": "select_account"},
-    api_base_url="https://www.googleapis.com/oauth2/v1/",
-    userinfo_endpoint="https://openidconnect.googleapis.com/v1/userinfo",
-    client_kwargs={"scope": "openid email profile"},
-)
+# google = oauth.register(
+#     name='google',
+#     client_id="YOUR_GOOGLE_CLIENT_ID",
+#     client_secret="YOUR_GOOGLE_CLIENT_SECRET",
+#     access_token_url="https://accounts.google.com/o/oauth2/token",
+#     access_token_params=None,
+#     authorize_url="https://accounts.google.com/o/oauth2/auth",
+#     authorize_params={"prompt": "select_account"},
+#     api_base_url="https://www.googleapis.com/oauth2/v1/",
+#     userinfo_endpoint="https://openidconnect.googleapis.com/v1/userinfo",
+#     client_kwargs={"scope": "openid email profile"},
+# )
 
 with app.app_context():
     db.create_all()
