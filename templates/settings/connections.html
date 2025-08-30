@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>🔌 Connections</h2>
+
+<div class="grid cols-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+  <div class="card">
+    <h3>GitHub</h3>
+    <p class="muted">Import issues, link PRs, show notifications.</p>
+    {% if gh %}
+      <p>✅ Connected</p>
+      <form method="post" action="{{ url_for('integrations.auth_github_disconnect') }}">
+        <button class="btn danger">Disconnect</button>
+      </form>
+    {% else %}
+      <a class="btn" href="{{ url_for('integrations.auth_github') }}">Connect GitHub</a>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3>Google</h3>
+    <p class="muted">Show Calendar events; extend to Drive, Gmail, etc.</p>
+    {% if gg %}
+      <p>✅ Connected</p>
+      <form method="post" action="{{ url_for('integrations.auth_google_disconnect') }}">
+        <button class="btn danger">Disconnect</button>
+      </form>
+    {% else %}
+      <a class="btn" href="{{ url_for('integrations.auth_google') }}">Connect Google</a>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3>Tips</h3>
+    <ul>
+      <li>Use a separate OAuth App for staging vs production.</li>
+      <li>Lock redirect URIs to exact HTTPS URLs.</li>
+      <li>Rotate client secrets; encrypt tokens at rest.</li>
+    </ul>
+    <button class="btn ghost" onclick="exportPage('connections.html')">Export Page</button>
+  </div>
+</div>
+{% endblock %}
