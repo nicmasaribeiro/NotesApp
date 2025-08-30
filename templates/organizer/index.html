@@ -1,0 +1,81 @@
+{% extends "organizer/base_organizer.html" %}
+{% block content %}
+<h2>My Day</h2>
+<div class="grid cols-3">
+  <div class="card">
+    <h3>⏱ Focus (25m)</h3>
+    <form method="post" action="{{ url_for('organizer.create_task') }}" class="row">
+      <input name="title" placeholder="Quick task…"/>
+      <select name="priority"><option value="1">High</option><option value="2" selected>Med</option><option value="3">Low</option></select>
+      <input type="datetime-local" name="due_date"/>
+      <input type="number" name="estimate_minutes" placeholder="Est. (min)" min="0"/>
+      <button type="submit">Add</button>
+    </form>
+    <p class="muted">Pick 1–3 items and run a Pomodoro.</p>
+  </div>
+
+  <div class="card">
+    <h3>📅 Upcoming (14 days)</h3>
+    <ul>
+      {% for t in tasks %}
+      <li>
+        <form method="post" action="{{ url_for('organizer.toggle_task', tid=t.id) }}" style="display:inline" onsubmit="fetch(this.action,{method:'POST'}).then(()=>location.reload()); return false;">
+          <button title="toggle">✔</button>
+        </form>
+        <strong>[P{{ t.priority }}] {{ t.title }}</strong>
+        {% if t.project %}<span class="pill">{{ t.project.name }}</span>{% endif %}
+        {% if t.due_date %}<span class="muted">due {{ t.due_date.strftime('%Y-%m-%d') }}</span>{% endif %}
+      </li>
+      {% else %}
+      <li class="muted">No tasks yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>🗓 Google Calendar</h3>
+    <ul id="gcal-list"><li class="muted">Loading…</li></ul>
+    <script>
+      fetch("{{ url_for('organizer.google_events_json') }}")
+        .then(r=>r.json()).then(d=>{
+          const ul = document.getElementById('gcal-list'); ul.innerHTML="";
+          (d.events||[]).forEach(e=>{
+            const li=document.createElement('li');
+            li.textContent=(e.start||'')+" — "+(e.summary||'(no title)');
+            ul.appendChild(li);
+          });
+          if(!d.events || d.events.length===0){ ul.innerHTML = '<li class="muted">No upcoming events (or not connected).</li>'; }
+        });
+    </script>
+
+    <h3 style="margin-top:16px;">🐙 GitHub (assigned)</h3>
+    <form onsubmit="fetch('{{ url_for('organizer.github_sync') }}',{method:'POST'}).then(()=>location.reload()); return false;">
+      <button>Import Open Issues → Tasks</button>
+    </form>
+    <ul>
+      {% for i in gh_issues %}
+      <li><a href="{{ i.html_url }}" target="_blank">{{ i.repo }}: {{ i.title }}</a></li>
+      {% else %}
+      <li class="muted">No GitHub issues or not connected.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<h2 style="margin-top:24px;">Active Projects</h2>
+<div class="grid cols-3">
+  {% for p in projects %}
+    <div class="card">
+      <h3><a href="{{ url_for('organizer.project_detail', pid=p.id) }}">{{ p.name }}</a></h3>
+      <p class="muted">{{ p.description or "—" }}</p>
+      <div class="row">
+        <span class="pill">P{{ p.priority }}</span>
+        {% if p.due_date %}<span class="pill">Due {{ p.due_date.strftime('%Y-%m-%d') }}</span>{% endif %}
+        <span class="pill">{{ p.status }}</span>
+      </div>
+    </div>
+  {% else %}
+    <div class="card muted">No projects yet.</div>
+  {% endfor %}
+</div>
+{% endblock %}
