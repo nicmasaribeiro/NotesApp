@@ -1,0 +1,45 @@
+{% extends "organizer/base_organizer.html" %}
+{% block content %}
+<div class="grid cols-3">
+  <div class="card" style="grid-column: span 2;">
+    <h2>{{ p.name }}</h2>
+    <p class="muted">{{ p.description or "—" }}</p>
+    <div class="row">
+      <span class="pill">Status: {{ p.status }}</span>
+      <span class="pill">Priority: P{{ p.priority }}</span>
+      {% if p.due_date %}<span class="pill">Due {{ p.due_date.strftime('%Y-%m-%d') }}</span>{% endif %}
+    </div>
+
+    <h3 style="margin-top:16px;">Tasks</h3>
+    <ul>
+      {% for t in tasks %}
+      <li>
+        <form method="post" action="{{ url_for('organizer.toggle_task', tid=t.id) }}" style="display:inline" onsubmit="fetch(this.action,{method:'POST'}).then(()=>location.reload()); return false;">
+          <button>✔</button>
+        </form>
+        <strong>[P{{ t.priority }}] {{ t.title }}</strong>
+        <span class="muted">{{ t.status }}</span>
+        {% if t.due_date %}<span class="muted">— due {{ t.due_date.strftime('%Y-%m-%d') }}</span>{% endif %}
+      </li>
+      {% else %}
+      <li class="muted">No tasks for this project.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Add Task</h3>
+    <form method="post" action="{{ url_for('organizer.create_task') }}" class="grid" style="grid-template-columns:1fr;">
+      <input type="hidden" name="project_id" value="{{ p.id }}"/>
+      <input name="title" placeholder="Task title" required/>
+      <textarea name="description" placeholder="Description"></textarea>
+      <label>Priority
+        <select name="priority"><option value="1">High</option><option value="2" selected>Med</option><option value="3">Low</option></select>
+      </label>
+      <label>Due <input type="datetime-local" name="due_date"></label>
+      <label>Estimate (min) <input type="number" name="estimate_minutes" min="0"></label>
+      <button type="submit">Create Task</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

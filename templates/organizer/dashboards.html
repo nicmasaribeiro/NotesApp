@@ -1,0 +1,22 @@
+{% extends "organizer/base_organizer.html" %}
+{% block content %}
+<div class="grid cols-3">
+  <div class="card">
+    <h3>➕ New Dashboard</h3>
+    <form method="post" class="grid" style="grid-template-columns:1fr;">
+      <input name="name" placeholder="Dashboard name" required/>
+      <button type="submit">Create</button>
+    </form>
+  </div>
+  <div class="card" style="grid-column: span 2;">
+    <h3>Dashboards</h3>
+    <ul>
+      {% for d in boards %}
+      <li><a href="{{ url_for('organizer.dashboard_detail', did=d.id) }}">{{ d.name }}</a></li>
+      {% else %}
+      <li class="muted">No dashboards yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

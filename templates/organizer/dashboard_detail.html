@@ -1,0 +1,330 @@
+{% extends "organizer/base_organizer.html" %}
+{% block content %}
+<h2>{{ d.name }}</h2>
+
+<!-- Controls -->
+<div class="row" style="margin-bottom:12px; gap:8px;">
+  <button class="btn" onclick="saveLayout()">Save Layout</button>
+  <button class="btn ghost" onclick="exportPage('{{ d.name|replace(' ','_') }}.html')">Export as HTML</button>
+  <button class="btn secondary" onclick="toggleLibrary()">Add Widgets</button>
+  <span class="muted">Layout autosaves locally</span>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom:12px;">
+  <form id="dash-filters" class="row" onsubmit="applyFilters(); return false;">
+    <label>Project
+      <select id="f-project">
+        <option value="">All</option>
+        {% for p in (projects or []) %}
+        <option value="{{ p.id }}">{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Status
+      <select id="f-status">
+        <option value="">Any</option>
+        <option value="todo">Todo</option>
+        <option value="doing">Doing</option>
+        <option value="done">Done</option>
+        <option value="blocked">Blocked</option>
+      </select>
+    </label>
+    <label>Time Window
+      <select id="f-window">
+        <option value="7">7d</option>
+        <option value="14" selected>14d</option>
+        <option value="30">30d</option>
+      </select>
+    </label>
+    <button class="btn" type="submit">Apply</button>
+    <button class="btn ghost" type="button" onclick="resetFilters()">Reset</button>
+  </form>
+</div>
+
+<!-- KPI Cards -->
+<div class="grid cols-3" style="margin-bottom:12px;">
+  <div class="card" id="kpi-total">
+    <div class="muted">Total Tasks</div>
+    <div style="font-size:28px;font-weight:700" id="kpi-total-val">—</div>
+  </div>
+  <div class="card" id="kpi-due">
+    <div class="muted">Due in Window</div>
+    <div style="font-size:28px;font-weight:700" id="kpi-due-val">—</div>
+  </div>
+  <div class="card" id="kpi-focus">
+    <div class="muted">Estimated Focus (hrs)</div>
+    <div style="font-size:28px;font-weight:700" id="kpi-focus-val">—</div>
+  </div>
+</div>
+
+<!-- Widget Grid -->
+<style>
+  /* light grid + drag styling */
+  #widgets { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; }
+  .widget { position:relative; }
+  .widget .handle{ position:absolute; right:10px; top:10px; cursor:grab; opacity:.6; }
+  .widget.dragging{ opacity:.6; }
+  .resizer{ position:absolute; right:8px; bottom:8px; width:14px; height:14px; cursor:nwse-resize; opacity:.5; }
+  .hidden{ display:none !important; }
+</style>
+
+<div id="widgets">
+  <!-- Default widgets (visibility + size controlled by layout) -->
+  <div class="card widget" data-key="w.top_tasks">
+    <div class="handle">⋮⋮</div>
+    <canvas id="chart-priority" height="110" style="width:100%;"></canvas>
+    <h3>🔥 Top Tasks</h3>
+    <ul id="w-top-tasks">
+      {% for t in (tasks or [])[:8] %}
+        <li>[P{{ t.priority }}] {{ t.title }} {% if t.due_date %}<span class="muted">— {{ t.due_date.strftime('%Y-%m-%d') }}</span>{% endif %}</li>
+      {% endfor %}
+    </ul>
+    <div class="resizer"></div>
+  </div>
+
+  <div class="card widget" data-key="w.calendar">
+    <div class="handle">⋮⋮</div>
+    <h3>🗓 Upcoming Events</h3>
+    <ul id="w-gcal"><li class="muted">Loading…</li></ul>
+    <div class="resizer"></div>
+  </div>
+
+  <div class="card widget" data-key="w.github">
+    <div class="handle">⋮⋮</div>
+    <h3>🐙 GitHub (assigned)</h3>
+    <ul id="w-gh">
+      {% for i in (gh_issues or []) %}<li><a href="{{ i.html_url }}" target="_blank">{{ i.repository.full_name if i.repository else '' }} {{ i.title }}</a></li>{% endfor %}
+      {% if not gh_issues %}<li class="muted">—</li>{% endif %}
+    </ul>
+    <div class="resizer"></div>
+  </div>
+
+  <div class="card widget" data-key="w.pomodoro">
+    <div class="handle">⋮⋮</div>
+    <h3>⏱ Pomodoro</h3>
+    <div class="row">
+      <input id="pom-task" placeholder="Focus task…">
+      <button class="btn" onclick="pomStart()">Start 25:00</button>
+      <button class="btn ghost" onclick="pomStop()">Stop</button>
+    </div>
+    <div style="font-size:36px;margin-top:8px;" id="pom-timer">25:00</div>
+    <div class="resizer"></div>
+  </div>
+
+  <div class="card widget" data-key="w.quick_add">
+    <div class="handle">⋮⋮</div>
+    <h3>➕ Quick Add Task</h3>
+    <form class="row" method="post" action="{{ url_for('organizer.create_task') }}">
+      <input name="title" placeholder="Task title" required>
+      <select name="priority"><option value="1">P1</option><option value="2" selected>P2</option><option value="3">P3</option></select>
+      <input type="datetime-local" name="due_date">
+      <input type="number" name="estimate_minutes" min="0" placeholder="Est. (min)">
+      <button class="btn" type="submit">Add</button>
+    </form>
+    <div class="resizer"></div>
+  </div>
+</div>
+
+<!-- Widget Library (toggle drawer) -->
+<div id="library" class="card hidden" style="margin-top:16px;">
+  <h3>Widget Library</h3>
+  <div class="row">
+    <button class="btn secondary" onclick="addWidget('w.top_tasks')">Top Tasks</button>
+    <button class="btn secondary" onclick="addWidget('w.calendar')">Calendar</button>
+    <button class="btn secondary" onclick="addWidget('w.github')">GitHub</button>
+    <button class="btn secondary" onclick="addWidget('w.pomodoro')">Pomodoro</button>
+    <button class="btn secondary" onclick="addWidget('w.quick_add')">Quick Add</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  // ---------- Persistence (local + server) ----------
+  const LSKEY = "org.dashboard.{{ d.id }}";
+  function readLayout(){ try{ return JSON.parse(localStorage.getItem(LSKEY) || "{}"); }catch(e){ return {}; } }
+  function writeLayout(obj){ localStorage.setItem(LSKEY, JSON.stringify(obj)); }
+  function saveLayout(){
+    // capture order, visibility and sizes
+    const layout = {};
+    [...document.querySelectorAll('#widgets .widget')].forEach((w, idx)=>{
+      const key = w.dataset.key;
+      const rect = w.getBoundingClientRect();
+      layout[key] = {
+        show: !w.classList.contains('hidden'),
+        order: idx,
+        w: w.style.gridColumnEnd || "span 1",
+        h: w.style.height || "",
+      };
+    });
+    writeLayout(layout);
+    // persist server-side
+    fetch("{{ url_for('organizer.dashboard_save', did=d.id) }}", {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(layout)
+    });
+  }
+  function applyLayout(){
+    const layout = readLayout();
+    const grid = document.getElementById('widgets');
+    // order
+    const widgets = [...grid.children];
+    widgets.sort((a,b)=>{
+      const la = layout[a.dataset.key]?.order ?? 0;
+      const lb = layout[b.dataset.key]?.order ?? 0;
+      return la - lb;
+    }).forEach(el=>grid.appendChild(el));
+    // style + visibility
+    widgets.forEach(w=>{
+      const cfg = layout[w.dataset.key] || {};
+      w.classList.toggle('hidden', cfg.show === false);
+      if(cfg.w) w.style.gridColumnEnd = cfg.w;
+      if(cfg.h) w.style.height = cfg.h;
+    });
+  }
+
+  // ---------- Widget Library ----------
+  function toggleLibrary(){ document.getElementById('library').classList.toggle('hidden'); }
+  function addWidget(key){
+    const w = document.querySelector(`.widget[data-key="${key}"]`);
+    if(!w) return;
+    w.classList.remove('hidden');
+    saveLayout();
+  }
+
+  // ---------- Drag & Drop (accessibility-friendly basic) ----------
+  let dragEl = null; let dragIdx = -1;
+  document.querySelectorAll('.widget .handle').forEach(h=>{
+    const w = h.closest('.widget');
+    h.setAttribute('draggable','true');
+    h.addEventListener('dragstart', (e)=> {
+      dragEl = w; dragIdx = [...w.parentNode.children].indexOf(w);
+      w.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    h.addEventListener('dragend', ()=>{
+      if(dragEl){ dragEl.classList.remove('dragging'); dragEl=null; dragIdx=-1; saveLayout(); }
+    });
+  });
+  document.getElementById('widgets').addEventListener('dragover', (e)=>{
+    e.preventDefault();
+    const grid = e.currentTarget;
+    const afterEl = [...grid.querySelectorAll('.widget:not(.dragging)')]
+      .find(el => e.clientY <= el.getBoundingClientRect().top + el.offsetHeight/2);
+    const dragging = grid.querySelector('.widget.dragging');
+    if(!dragging) return;
+    if(afterEl) grid.insertBefore(dragging, afterEl); else grid.appendChild(dragging);
+  });
+
+  // ---------- Resize ----------
+  document.querySelectorAll('.widget .resizer').forEach(r=>{
+    const w = r.closest('.widget');
+    let startY, startH;
+    r.addEventListener('mousedown', (e)=>{
+      startY = e.clientY; startH = parseInt(getComputedStyle(w).height || 0);
+      const mm = (ev)=>{ w.style.height = Math.max(140, startH + (ev.clientY - startY)) + 'px'; };
+      const mu = ()=>{ document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); saveLayout(); };
+      document.addEventListener('mousemove', mm);
+      document.addEventListener('mouseup', mu);
+    });
+  });
+
+  // ---------- Filters + KPIs ----------
+  function resetFilters(){
+    document.getElementById('f-project').value = "";
+    document.getElementById('f-status').value = "";
+    document.getElementById('f-window').value = "14";
+    applyFilters();
+  }
+  function applyFilters(){
+    // For now, filters drive KPIs and the Top Tasks list client-side.
+    const project = document.getElementById('f-project').value;
+    const status = document.getElementById('f-status').value;
+    const windowDays = parseInt(document.getElementById('f-window').value || "14", 10);
+
+    // We re-read the tasks list server-rendered in DOM, filter them, and update KPIs.
+    const li = [...document.querySelectorAll('#w-top-tasks li')];
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + windowDays*24*3600*1000);
+
+    // parse basic fields (priority + date)
+    const rows = li.map(x=>{
+      const txt = x.textContent;
+      const m = txt.match(/\[P(\d)]\s*(.*?)\s*—\s*(\d{4}-\d{2}-\d{2})?/);
+      return {
+        el: x,
+        p: m ? parseInt(m[1],10) : 2,
+        title: m ? m[2] : txt,
+        due: (m && m[3]) ? new Date(m[3]) : null
+      };
+    });
+
+    // filter logic (basic; project/status would require data attrs if you want client-only)
+    rows.forEach(r=> r.el.style.display = ""); // reset
+    const inWindow = rows.filter(r => !r.due || r.due <= cutoff);
+    document.getElementById('kpi-due-val').textContent = inWindow.length.toString();
+    document.getElementById('kpi-total-val').textContent = rows.length.toString();
+
+    // estimate focus = sum(estimate_minutes)/60 — if you want precise,
+    // render estimates as data-est on <li> server side and read them here.
+    // For demo, assume each visible is ~25 min.
+    const visible = rows.filter(r => r.el.style.display !== "none");
+    const estMin = visible.length * 25;
+    document.getElementById('kpi-focus-val').textContent = (estMin/60).toFixed(1);
+  }
+
+  // ---------- Pomodoro ----------
+  let pomInt=null, pomRemaining=25*60;
+  function pomRender(){
+    const m = Math.floor(pomRemaining/60).toString().padStart(2,'0');
+    const s = (pomRemaining%60).toString().padStart(2,'0');
+    document.getElementById('pom-timer').textContent = `${m}:${s}`;
+  }
+  function pomStart(){
+    if(pomInt) return;
+    pomRemaining = 25*60; pomRender();
+    pomInt = setInterval(()=>{
+      pomRemaining--; pomRender();
+      if(pomRemaining<=0){ clearInterval(pomInt); pomInt=null; alert("Pomodoro done!"); }
+    }, 1000);
+  }
+  function pomStop(){ clearInterval(pomInt); pomInt=null; pomRemaining=25*60; pomRender(); }
+
+  // ---------- Data: Google + GitHub + Chart ----------
+  function loadGcal(){
+    fetch("{{ url_for('organizer.google_events_json') }}")
+      .then(r=>r.json()).then(d=>{
+        const ul = document.getElementById('w-gcal'); ul.innerHTML="";
+        (d.events||[]).forEach(e=>{
+          const li=document.createElement('li');
+          li.textContent=(e.start||'')+" — "+(e.summary||'(no title)');
+          ul.appendChild(li);
+        });
+        if(!d.events || d.events.length===0){ ul.innerHTML = '<li class="muted">—</li>'; }
+      });
+  }
+
+  function drawPriorityChart(){
+    const ctx = document.getElementById('chart-priority');
+    if(!ctx) return;
+    // read P1/P2/P3 counts from Top Tasks list
+    const counts = {1:0,2:0,3:0};
+    [...document.querySelectorAll('#w-top-tasks li')].forEach(li=>{
+      const m = li.textContent.match(/\[P(\d)]/); if(m) counts[parseInt(m[1],10)]++;
+    });
+    new Chart(ctx, {
+      type:'bar',
+      data:{ labels:['P1','P2','P3'], datasets:[{ data:[counts[1],counts[2],counts[3]] }] },
+      options:{ plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true } } }
+    });
+  }
+
+  // ---------- Boot ----------
+  document.addEventListener("DOMContentLoaded", ()=>{
+    applyLayout();           // local layout
+    loadGcal();              // events
+    applyFilters();          // KPIs
+    drawPriorityChart();     // mini viz
+  });
+</script>
+{% endblock %}

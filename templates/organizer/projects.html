@@ -1,0 +1,35 @@
+{% extends "organizer/base_organizer.html" %}
+{% block content %}
+<div class="grid cols-3">
+  <div class="card">
+    <h3>➕ New Project</h3>
+    <form method="post" class="grid" style="grid-template-columns:1fr;">
+      <input name="name" placeholder="Project name" required/>
+      <textarea name="description" placeholder="Description"></textarea>
+      <label>Priority
+        <select name="priority"><option value="1">High</option><option value="2" selected>Med</option><option value="3">Low</option></select>
+      </label>
+      <label>Due <input type="datetime-local" name="due_date"></label>
+      <button type="submit">Create</button>
+    </form>
+  </div>
+  <div class="card" style="grid-column: span 2;">
+    <h3>Projects</h3>
+    <table style="width:100%;">
+      <thead><tr><th>Name</th><th>Status</th><th>Priority</th><th>Due</th></tr></thead>
+      <tbody>
+        {% for p in projects %}
+        <tr>
+          <td><a href="{{ url_for('organizer.project_detail', pid=p.id) }}">{{ p.name }}</a></td>
+          <td>{{ p.status }}</td>
+          <td>P{{ p.priority }}</td>
+          <td>{{ p.due_date and p.due_date.strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="muted">No projects yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

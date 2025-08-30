@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>{{ title or "Organizer" }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    :root{ --bg:#0b0e11; --card:#121826; --text:#e6edf3; --muted:#9aa7b2; --border:#1c2433; --brand:#1f6feb; }
+    body{ margin:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    header{ padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px;}
+    .brand{ font-weight:700; letter-spacing:.5px;}
+    .container{ max-width:1100px; margin:20px auto; padding:0 16px;}
+    .grid{ display:grid; gap:16px; }
+    .cols-3{ grid-template-columns: repeat(3, 1fr); }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+    .muted{ color:var(--muted); }
+    button, input, select, textarea{ background:#0f1420; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+    .pill{ display:inline-block; padding:2px 8px; border:1px solid var(--border); border-radius:999px; font-size:12px; }
+    a{ color:var(--brand); text-decoration:none; }
+    .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center;}
+  </style>
+  <script>
+    // export current page as HTML (data-URI), inspired by your template
+    function exportPage(filename="dashboard.html"){
+      const html = document.documentElement.outerHTML;
+      const href = 'data:text/html;charset=UTF-8,'+encodeURIComponent(html);
+      const a = document.createElement('a'); a.href = href; a.download = filename; a.click();
+    }
+    // simple localStorage counter demo (used in header)
+    const myStorage = window.localStorage;
+    function bumpCounter(key="orgCounter"){
+      const c = parseInt(myStorage.getItem(key) || "0") + 1;
+      myStorage.setItem(key, c); const el = document.getElementById("counter");
+      if(el) el.textContent = c;
+    }
+    document.addEventListener("DOMContentLoaded", ()=>{ bumpCounter(); });
+  </script>
+</head>
+<body>
+<header>
+  <div class="brand">📋 Project Organizer</div>
+  <span class="muted">Counter:</span> <strong id="counter">0</strong>
+  <div style="flex:1"></div>
+  <a class="pill" href="{{ url_for('organizer.index') }}">Home</a>
+  <a class="pill" href="{{ url_for('organizer.projects') }}">Projects</a>
+  <a class="pill" href="{{ url_for('organizer.dashboards') }}">Dashboards</a>
+  <button onclick="exportPage()">Export HTML</button>
+</header>
+<div class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="card">
+        {% for cat,msg in messages %}<div><strong>{{ cat|title }}:</strong> {{ msg }}</div>{% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</div>
+</body>
+</html>
