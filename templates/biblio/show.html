@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>{{ c.title or c.key }}</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,sans-serif; margin:2rem; color:#e6edf3; background:#0b0e11}
+    .muted{color:#9aa7b2}
+    pre{background:#0e1318; border:1px solid #202a33; padding:1rem; border-radius:12px; overflow:auto}
+    a{color:#1f6feb}
+  </style>
+</head>
+<body>
+  <p><a href="{{ url_for('biblio.list_citations') }}">← Back to list</a></p>
+  <h1>{{ c.title or c.key }}</h1>
+  <p class="muted">{{ c.authors }} ({{ c.year }}) — {{ c.venue }}</p>
+  {% if c.abstract %}<p>{{ c.abstract }}</p>{% endif %}
+  {% if c.url %}<p><a href="{{ c.url }}" target="_blank" rel="noopener">Open link</a></p>{% endif %}
+  {% if c.doi %}<p>DOI: {{ c.doi }}</p>{% endif %}
+  {% if c.tags %}<p class="muted">Tags: {{ c.tags }}</p>{% endif %}
+
+  {% if c.raw %}
+  <h3>Raw</h3>
+  <pre>{{ c.raw }}</pre>
+  {% endif %}
+  
+  
+</body>
+</html>
